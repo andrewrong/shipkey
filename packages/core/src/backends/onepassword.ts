@@ -124,24 +124,25 @@ export class OnePasswordBackend implements SecretBackend {
   ): Promise<Map<string, { section: string; label: string }[]>> {
     const result = new Map<string, { section: string; label: string }[]>();
     try {
-      // Use pipe to fetch all item details in a single shell command (2 op processes)
-      // instead of N+1 separate op processes
+      // Use shell pipe: op item list | op item get - (2 op processes in 1 shell command)
       const safeVault = vault.replace(/'/g, "'\\''");
       const raw = await execShell(
-        `op item list --vault '${safeVault}' --format json | op item get - --vault '${safeVault}' --format json`
+        `op item list --vault '${safeVault}' --format json | op item get - --format json`
       );
 
-      // op item get with piped input returns JSON array or newline-delimited JSON
+      // op item get outputs concatenated multi-line JSON objects
       let items: any[];
       const trimmed = raw.trim();
       if (trimmed.startsWith("[")) {
         items = JSON.parse(trimmed);
       } else {
-        // Newline-delimited JSON objects
-        items = trimmed
-          .split("\n")
-          .filter((line) => line.trim())
-          .map((line) => JSON.parse(line));
+        // Parse concatenated JSON objects by tracking brace depth
+        items = [];
+        let depth = 0, start = 0;
+        for (let i = 0; i < trimmed.length; i++) {
+          if (trimmed[i] === "{") { if (depth === 0) start = i; depth++; }
+          if (trimmed[i] === "}") { depth--; if (depth === 0) { try { items.push(JSON.parse(trimmed.substring(start, i + 1))); } catch {} } }
+        }
       }
 
       for (const item of items) {
