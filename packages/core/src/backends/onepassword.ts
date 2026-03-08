@@ -164,12 +164,16 @@ export class OnePasswordBackend implements SecretBackend {
     return result;
   }
 
+  private vaultCache = new Set<string>();
+
   async ensureVault(vault: string): Promise<void> {
+    if (this.vaultCache.has(vault)) return;
     try {
       await exec(["vault", "get", vault]);
     } catch {
       await exec(["vault", "create", vault, "--icon", "vault-door"]);
     }
+    this.vaultCache.add(vault);
   }
 
   async write(entry: SecretEntry): Promise<void> {
@@ -202,6 +206,43 @@ export class OnePasswordBackend implements SecretBackend {
         ref.provider,
         `${fieldKey}[password]=${value}`,
       ]);
+    }
+  }
+
+  async writeMany(entries: SecretEntry[]): Promise<void> {
+    if (entries.length === 0) return;
+
+    // Group by vault + provider
+    const groups = new Map<string, SecretEntry[]>();
+    for (const entry of entries) {
+      const key = `${entry.ref.vault}\0${entry.ref.provider}`;
+      const group = groups.get(key) ?? [];
+      group.push(entry);
+      groups.set(key, group);
+    }
+
+    for (const group of groups.values()) {
+      const { vault, provider, project, env } = group[0].ref;
+      const section = this.sectionName(project, env);
+      await this.ensureVault(vault);
+
+      const fieldArgs = group.map(({ ref, value }) => {
+        const fieldKey = `${section}.${ref.field}`;
+        return `${fieldKey}[password]=${value}`;
+      });
+
+      try {
+        // Edit existing item with all fields at once
+        await exec(["item", "edit", provider, "--vault", vault, ...fieldArgs]);
+      } catch {
+        // Item doesn't exist, create with all fields
+        await exec([
+          "item", "create", "--vault", vault,
+          "--category", "API Credential",
+          "--title", provider,
+          ...fieldArgs,
+        ]);
+      }
     }
   }
 

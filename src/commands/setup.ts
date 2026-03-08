@@ -251,28 +251,52 @@ async function handleStore(
   const results: { field: string; status: "ok" | "error"; error?: string }[] = [];
   const localEnvVars: Record<string, string> = {};
 
+  // Collect entries for batch write
+  const entries: { ref: { vault: string; provider: string; project: string; env: string; field: string }; value: string }[] = [];
   for (const [field, value] of Object.entries(body.fields)) {
     if (!value.trim()) continue;
-    try {
-      await backend.write({
-        ref: {
-          vault: config.vault,
-          provider: body.provider,
-          project: config.project,
-          env,
-          field,
-        },
-        value,
-      });
-      // Field name IS the env var name
-      localEnvVars[field] = value;
-      results.push({ field, status: "ok" });
-    } catch (err) {
-      results.push({
+    entries.push({
+      ref: {
+        vault: config.vault,
+        provider: body.provider,
+        project: config.project,
+        env,
         field,
-        status: "error",
-        error: err instanceof Error ? err.message : String(err),
-      });
+      },
+      value,
+    });
+  }
+
+  // Use batch write if backend supports it, otherwise write individually
+  if ("writeMany" in backend && entries.length > 0) {
+    try {
+      await (backend as any).writeMany(entries);
+      for (const entry of entries) {
+        localEnvVars[entry.ref.field] = entry.value;
+        results.push({ field: entry.ref.field, status: "ok" });
+      }
+    } catch (err) {
+      for (const entry of entries) {
+        results.push({
+          field: entry.ref.field,
+          status: "error",
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  } else {
+    for (const entry of entries) {
+      try {
+        await backend.write(entry);
+        localEnvVars[entry.ref.field] = entry.value;
+        results.push({ field: entry.ref.field, status: "ok" });
+      } catch (err) {
+        results.push({
+          field: entry.ref.field,
+          status: "error",
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
   }
 
@@ -477,6 +501,18 @@ function startServer(
     statusCache.clear();
   }
 
+  function updateCacheFields(env: string, provider: string, fields: string[]) {
+    const cached = statusCache.get(env);
+    if (!cached) return;
+    if (!cached.data.field_status[provider]) {
+      cached.data.field_status[provider] = {};
+    }
+    for (const field of fields) {
+      cached.data.field_status[provider][field] = "stored";
+    }
+    cached.time = Date.now(); // refresh TTL
+  }
+
   return Bun.serve({
     port: port ?? 0,
     idleTimeout: 120,
@@ -563,7 +599,9 @@ function startServer(
           const body = await req.json();
           const currentEnv = resolveEnv(url, body);
           const result = await handleStore(config, currentEnv, projectRoot, body, backend);
-          invalidateStatusCache();
+          // Update cache optimistically instead of invalidating (avoids re-querying op)
+          const storedFields = Object.keys(body.fields).filter((f: string) => body.fields[f]?.trim());
+          updateCacheFields(currentEnv, body.provider, storedFields);
           return result;
         }
 
