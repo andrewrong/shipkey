@@ -21,6 +21,11 @@ export class OnePasswordBackend implements SecretBackend {
     return `${project}-${env}`;
   }
 
+  /** Escape dots, equals, and backslashes for op assignment statements */
+  private escapeAssignment(s: string): string {
+    return s.replace(/\\/g, "\\\\").replace(/\./g, "\\.").replace(/=/g, "\\=");
+  }
+
   buildRef(ref: SecretRef): string {
     const section = this.sectionName(ref.project, ref.env);
     return `op://${ref.vault}/${ref.provider}/${section}/${ref.field}`;
@@ -32,8 +37,9 @@ export class OnePasswordBackend implements SecretBackend {
 
   buildWriteArgs(entry: SecretEntry): string[] {
     const { ref, value } = entry;
-    const section = this.sectionName(ref.project, ref.env);
-    const fieldKey = `${section}.${ref.field}`;
+    const section = this.escapeAssignment(this.sectionName(ref.project, ref.env));
+    const field = this.escapeAssignment(ref.field);
+    const fieldKey = `${section}.${field}`;
     return [
       "item",
       "edit",
@@ -178,8 +184,9 @@ export class OnePasswordBackend implements SecretBackend {
 
   async write(entry: SecretEntry): Promise<void> {
     const { ref, value } = entry;
-    const section = this.sectionName(ref.project, ref.env);
-    const fieldKey = `${section}.${ref.field}`;
+    const section = this.escapeAssignment(this.sectionName(ref.project, ref.env));
+    const field = this.escapeAssignment(ref.field);
+    const fieldKey = `${section}.${field}`;
 
     await this.ensureVault(ref.vault);
 
@@ -223,11 +230,12 @@ export class OnePasswordBackend implements SecretBackend {
 
     for (const group of groups.values()) {
       const { vault, provider, project, env } = group[0].ref;
-      const section = this.sectionName(project, env);
+      const section = this.escapeAssignment(this.sectionName(project, env));
       await this.ensureVault(vault);
 
       const fieldArgs = group.map(({ ref, value }) => {
-        const fieldKey = `${section}.${ref.field}`;
+        const field = this.escapeAssignment(ref.field);
+        const fieldKey = `${section}.${field}`;
         return `${fieldKey}[password]=${value}`;
       });
 
