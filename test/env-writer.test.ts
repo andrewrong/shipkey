@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from "fs";
 import { join } from "path";
-import { detectEnvFile, writeEnvFile } from "../src/env-writer";
+import { detectEnvFile, writeEnvFile, formatEnvValue, mergeEnvContent } from "../src/env-writer";
 
 const TMP = join(import.meta.dir, "__env_writer_fixtures__");
 
@@ -116,6 +116,237 @@ describe("writeEnvFile", () => {
     writeFileSync(join(TMP, "wrangler.toml"), "name = 'worker'\n");
     const filename2 = await writeEnvFile(TMP, { KEY2: "val2" });
     expect(filename2).toBe(".dev.vars");
+  });
+});
+
+describe("formatEnvValue", () => {
+  test("returns simple values unchanged", () => {
+    expect(formatEnvValue("sk-test-123")).toBe("sk-test-123");
+    expect(formatEnvValue("postgres://localhost:5432/db")).toBe(
+      "postgres://localhost:5432/db"
+    );
+  });
+
+  test("wraps multi-line values in double quotes with escaped newlines", () => {
+    const pem =
+      "-----BEGIN RSA PRIVATE KEY-----\nMIIEvQIBADANBg\nkGWgYS/VBbwQ==\n-----END RSA PRIVATE KEY-----";
+    const result = formatEnvValue(pem);
+    expect(result).toStartWith('"');
+    expect(result).toEndWith('"');
+    expect(result).toContain("\\n");
+    expect(result).not.toContain("\n"); // no literal newlines
+    // Round-trip: unescaping should recover original
+    const unescaped = result
+      .slice(1, -1)
+      .replace(/\\n/g, "\n")
+      .replace(/\\r/g, "\r")
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\");
+    expect(unescaped).toBe(pem);
+  });
+
+  test("escapes internal double quotes", () => {
+    const value = 'value with "quotes"\nand newlines';
+    const result = formatEnvValue(value);
+    expect(result).toBe('"value with \\"quotes\\"\\nand newlines"');
+  });
+
+  test("quotes values with leading/trailing whitespace", () => {
+    expect(formatEnvValue("  spaced  ")).toBe('"  spaced  "');
+  });
+
+  test("quotes values with inline hash", () => {
+    expect(formatEnvValue("value#comment")).toBe('"value#comment"');
+  });
+});
+
+describe("writeEnvFile — multi-line values", () => {
+  test("writes multi-line values as escaped single-line strings", async () => {
+    const pem =
+      "-----BEGIN RSA PRIVATE KEY-----\nMIIEvQIBADANBg\n-----END RSA PRIVATE KEY-----";
+    await writeEnvFile(TMP, { PRIVATE_KEY: pem });
+    const content = readFileSync(join(TMP, ".env"), "utf-8");
+    // Should be a single line with escaped newlines
+    const keyLines = content.split("\n").filter((l) => l.startsWith("PRIVATE_KEY="));
+    expect(keyLines).toHaveLength(1);
+    expect(keyLines[0]).toContain("\\n");
+    expect(keyLines[0]).toContain("BEGIN RSA PRIVATE KEY");
+    expect(keyLines[0]).toContain("END RSA PRIVATE KEY");
+  });
+
+  test("updates corrupted multi-line PEM key to properly escaped format", async () => {
+    // Simulate a corrupted file from a previous buggy write
+    writeFileSync(
+      join(TMP, ".env"),
+      [
+        "SOME_KEY=value1",
+        "GITHUB_APP_PRIVATE_KEY=-----BEGIN RSA PRIVATE KEY-----",
+        "MIIEvQIBADANBg",
+        "kGWgYS/VBbwQ==",
+        "-----END RSA PRIVATE KEY-----",
+        "OTHER_KEY=value2",
+        "",
+      ].join("\n")
+    );
+
+    const newPem =
+      "-----BEGIN RSA PRIVATE KEY-----\nNEWKEYDATA\n-----END RSA PRIVATE KEY-----";
+    await writeEnvFile(TMP, { GITHUB_APP_PRIVATE_KEY: newPem });
+
+    const content = readFileSync(join(TMP, ".env"), "utf-8");
+    // Corrupted orphan lines should be gone
+    expect(content).not.toContain("MIIEvQIBADANBg");
+    expect(content).not.toContain("kGWgYS/VBbwQ==");
+    // New key should be properly escaped on one line
+    const keyLines = content
+      .split("\n")
+      .filter((l) => l.startsWith("GITHUB_APP_PRIVATE_KEY="));
+    expect(keyLines).toHaveLength(1);
+    expect(keyLines[0]).toContain("\\n");
+    // Other keys preserved
+    expect(content).toContain("SOME_KEY=value1");
+    expect(content).toContain("OTHER_KEY=value2");
+  });
+
+  test("handles properly quoted multi-line values in existing file", async () => {
+    // Existing file with a properly quoted multi-line value
+    writeFileSync(
+      join(TMP, ".env"),
+      'PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\\nOLDDATA\\n-----END RSA PRIVATE KEY-----"\nOTHER=val\n'
+    );
+
+    const newPem =
+      "-----BEGIN RSA PRIVATE KEY-----\nNEWDATA\n-----END RSA PRIVATE KEY-----";
+    await writeEnvFile(TMP, { PRIVATE_KEY: newPem });
+
+    const content = readFileSync(join(TMP, ".env"), "utf-8");
+    const keyLines = content
+      .split("\n")
+      .filter((l) => l.startsWith("PRIVATE_KEY="));
+    expect(keyLines).toHaveLength(1);
+    expect(keyLines[0]).toContain("NEWDATA");
+    expect(keyLines[0]).not.toContain("OLDDATA");
+    expect(content).toContain("OTHER=val");
+  });
+
+  test("multiple pulls with multi-line values don't corrupt file", async () => {
+    const pem1 =
+      "-----BEGIN PRIVATE KEY-----\nKEY1DATA\n-----END PRIVATE KEY-----";
+    const pem2 =
+      "-----BEGIN PRIVATE KEY-----\nKEY2DATA\n-----END PRIVATE KEY-----";
+
+    await writeEnvFile(TMP, { PRIVATE_KEY: pem1, OTHER: "val1" });
+    await writeEnvFile(TMP, { PRIVATE_KEY: pem2 });
+
+    const content = readFileSync(join(TMP, ".env"), "utf-8");
+    const keyLines = content
+      .split("\n")
+      .filter((l) => l.startsWith("PRIVATE_KEY="));
+    expect(keyLines).toHaveLength(1);
+    expect(keyLines[0]).toContain("KEY2DATA");
+    expect(keyLines[0]).not.toContain("KEY1DATA");
+    expect(content).toContain("OTHER=val1");
+  });
+});
+
+describe("formatEnvValue — edge cases", () => {
+  test("escapes carriage returns", () => {
+    const value = "line1\r\nline2";
+    const result = formatEnvValue(value);
+    expect(result).toBe('"line1\\r\\nline2"');
+  });
+
+  test("returns empty string unchanged", () => {
+    expect(formatEnvValue("")).toBe("");
+  });
+
+  test("value with backslashes but no newlines is not quoted", () => {
+    expect(formatEnvValue("C:\\path\\to\\file")).toBe("C:\\path\\to\\file");
+  });
+
+  test("value with backslashes AND newlines escapes both", () => {
+    const value = "path\\to\nfile";
+    const result = formatEnvValue(value);
+    expect(result).toBe('"path\\\\to\\nfile"');
+    // Round-trip
+    const restored = result
+      .slice(1, -1)
+      .replace(/\\n/g, "\n")
+      .replace(/\\\\/g, "\\");
+    expect(restored).toBe(value);
+  });
+});
+
+describe("mergeEnvContent", () => {
+  test("handles empty existing content", () => {
+    const result = mergeEnvContent("", { KEY: "value" });
+    expect(result).toBe("KEY=value\n");
+  });
+
+  test("preserves file structure while merging", () => {
+    const existing = "# Header\n\nFOO=bar\nBAZ=qux\n";
+    const result = mergeEnvContent(existing, { FOO: "updated", NEW: "val" });
+    expect(result).toContain("# Header");
+    expect(result).toContain("FOO=updated");
+    expect(result).toContain("BAZ=qux");
+    expect(result).toContain("NEW=val");
+    expect(result).not.toContain("FOO=bar");
+  });
+
+  test("handles literal multi-line quoted values in existing file", () => {
+    // Existing file with a value using literal newlines inside double quotes
+    const existing = [
+      'PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----',
+      "MIIEvQIBADANBg",
+      '-----END RSA PRIVATE KEY-----"',
+      "OTHER=val",
+      "",
+    ].join("\n");
+
+    const newPem =
+      "-----BEGIN RSA PRIVATE KEY-----\nNEWDATA\n-----END RSA PRIVATE KEY-----";
+    const content = mergeEnvContent(existing, { PRIVATE_KEY: newPem });
+
+    // Multi-line quoted value should be replaced as a whole
+    const pemLines = content
+      .split("\n")
+      .filter((l) => l.startsWith("PRIVATE_KEY="));
+    expect(pemLines).toHaveLength(1);
+    expect(pemLines[0]).toContain("NEWDATA");
+    // Orphan body lines from the old quoted value should be gone
+    expect(content).not.toContain("MIIEvQIBADANBg");
+    // Other keys preserved
+    expect(content).toContain("OTHER=val");
+  });
+
+  test("handles values containing equals signs (base64)", () => {
+    const existing = "SECRET=abc123==\nOTHER=val\n";
+    const content = mergeEnvContent(existing, { SECRET: "xyz789==" });
+    expect(content).toContain("SECRET=xyz789==");
+    expect(content).not.toContain("abc123==");
+    expect(content).toContain("OTHER=val");
+  });
+
+  test("handles orphan lines at file start (no preceding kv)", () => {
+    // A garbage line before any valid key-value
+    const existing = "some random text\nKEY=value\n";
+    const content = mergeEnvContent(existing, { KEY: "updated" });
+    expect(content).toContain("some random text");
+    expect(content).toContain("KEY=updated");
+    expect(content).not.toContain("KEY=value");
+  });
+
+  test("handles duplicate keys in existing file (updates first occurrence)", () => {
+    const existing = "KEY=first\nOTHER=middle\nKEY=second\n";
+    const content = mergeEnvContent(existing, { KEY: "new" });
+
+    const keyLines = content.split("\n").filter((l) => l.startsWith("KEY="));
+    // Both occurrences should be updated (same key matched twice)
+    expect(keyLines.length).toBeGreaterThanOrEqual(1);
+    for (const line of keyLines) {
+      expect(line).toBe("KEY=new");
+    }
+    expect(content).toContain("OTHER=middle");
   });
 });
 
