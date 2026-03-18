@@ -88,3 +88,20 @@ describe("buildEnvKeyToOpRef (legacy)", () => {
     );
   });
 });
+
+describe("buildSecretRefMap with parenthesized provider", () => {
+  test("sanitizes parentheses in op:// references", () => {
+    const config = {
+      project: "myapp",
+      vault: "shipkey",
+      providers: {
+        "xAI (Grok)": { fields: ["XAI_API_KEY"] },
+      },
+    };
+    const backend = new OnePasswordBackend();
+    const map = buildSecretRefMap(config, backend, "prod");
+    expect(map.get("XAI_API_KEY")).toBe(
+      "op://shipkey/xAI Grok/myapp-prod/XAI_API_KEY"
+    );
+  });
+});

@@ -44,6 +44,12 @@ export const PROVIDERS: ProviderDefinition[] = [
     guide_url: "https://fal.ai/dashboard/keys",
     guide: "fal.ai > Dashboard > Keys",
   },
+  {
+    name: "xAI",
+    patterns: [/XAI/i, /GROK/i],
+    guide_url: "https://console.x.ai",
+    guide: "xAI Console > API Keys > Create API Key",
+  },
   // --- Payments ---
   {
     name: "Stripe",

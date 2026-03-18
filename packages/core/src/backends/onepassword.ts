@@ -26,9 +26,14 @@ export class OnePasswordBackend implements SecretBackend {
     return s.replace(/\\/g, "\\\\").replace(/\./g, "\\.").replace(/=/g, "\\=");
   }
 
+  /** Strip characters that are invalid in op:// secret references */
+  private sanitizeRef(name: string): string {
+    return name.replace(/[()[\]{}]/g, "").replace(/\s+/g, " ").trim();
+  }
+
   buildRef(ref: SecretRef): string {
     const section = this.sectionName(ref.project, ref.env);
-    return `op://${ref.vault}/${ref.provider}/${section}/${ref.field}`;
+    return `op://${ref.vault}/${this.sanitizeRef(ref.provider)}/${section}/${ref.field}`;
   }
 
   buildInlineRef(ref: SecretRef): string | null {
@@ -43,7 +48,7 @@ export class OnePasswordBackend implements SecretBackend {
     return [
       "item",
       "edit",
-      ref.provider,
+      this.sanitizeRef(ref.provider),
       "--vault",
       ref.vault,
       `${fieldKey}[password]=${value}`,
@@ -106,7 +111,7 @@ export class OnePasswordBackend implements SecretBackend {
       const raw = await exec([
         "item",
         "get",
-        provider,
+        this.sanitizeRef(provider),
         "--vault",
         vault,
         "--format",
@@ -190,12 +195,13 @@ export class OnePasswordBackend implements SecretBackend {
 
     await this.ensureVault(ref.vault);
 
+    const sanitizedProvider = this.sanitizeRef(ref.provider);
     try {
       // Try editing existing item first
       await exec([
         "item",
         "edit",
-        ref.provider,
+        sanitizedProvider,
         "--vault",
         ref.vault,
         `${fieldKey}[password]=${value}`,
@@ -210,7 +216,7 @@ export class OnePasswordBackend implements SecretBackend {
         "--category",
         "API Credential",
         "--title",
-        ref.provider,
+        sanitizedProvider,
         `${fieldKey}[password]=${value}`,
       ]);
     }
@@ -230,6 +236,7 @@ export class OnePasswordBackend implements SecretBackend {
 
     for (const group of groups.values()) {
       const { vault, provider, project, env } = group[0].ref;
+      const sanitizedProvider = this.sanitizeRef(provider);
       const section = this.escapeAssignment(this.sectionName(project, env));
       await this.ensureVault(vault);
 
@@ -241,13 +248,13 @@ export class OnePasswordBackend implements SecretBackend {
 
       try {
         // Edit existing item with all fields at once
-        await exec(["item", "edit", provider, "--vault", vault, ...fieldArgs]);
+        await exec(["item", "edit", sanitizedProvider, "--vault", vault, ...fieldArgs]);
       } catch {
         // Item doesn't exist, create with all fields
         await exec([
           "item", "create", "--vault", vault,
           "--category", "API Credential",
-          "--title", provider,
+          "--title", sanitizedProvider,
           ...fieldArgs,
         ]);
       }
