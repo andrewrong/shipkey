@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { getBackend } from "../backends";
 import { loadConfig } from "../config";
 import { resolve, basename } from "path";
+import { BULLET } from "../symbols";
 
 export const listCommand = new Command("list")
   .description("List keys stored in your password manager")
@@ -50,7 +51,7 @@ export const listCommand = new Command("list")
     for (const [group, items] of grouped) {
       console.log(`  ${group}`);
       for (const item of items) {
-        console.log(`    · ${item.field}`);
+        console.log(`    ${BULLET} ${item.field}`);
       }
     }
   });

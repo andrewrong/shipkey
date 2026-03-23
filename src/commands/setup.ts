@@ -12,6 +12,7 @@ import { writeEnvFile } from "../env-writer";
 import { GitHubTarget } from "../targets/github";
 import { CloudflareTarget } from "../targets/cloudflare";
 import type { SyncTarget, TargetStatus } from "../targets/types";
+import { TICK } from "../symbols";
 
 const TARGETS: Record<string, SyncTarget> = {
   github: new GitHubTarget(),
@@ -627,9 +628,9 @@ export const setupCommand = new Command("setup")
     const outPath = join(projectRoot, "shipkey.json");
     await writeFile(outPath, JSON.stringify(config, null, 2) + "\n");
     if (existing) {
-      console.log(`\n  ✓ Updated shipkey.json\n`);
+      console.log(`\n  ${TICK} Updated shipkey.json\n`);
     } else {
-      console.log(`\n  ✓ Generated shipkey.json\n`);
+      console.log(`\n  ${TICK} Generated shipkey.json\n`);
     }
 
     const backend = getBackend(config.backend);

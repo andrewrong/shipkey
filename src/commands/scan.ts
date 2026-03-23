@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { resolve, join } from "path";
 import { writeFile } from "fs/promises";
 import { scanProject, printScanSummary } from "../scanner/project";
+import { TICK } from "../symbols";
 
 export const scanCommand = new Command("scan")
   .description("Scan project and generate shipkey.json")
@@ -17,7 +18,7 @@ export const scanCommand = new Command("scan")
     if (!opts.dryRun) {
       const outPath = join(projectRoot, "shipkey.json");
       await writeFile(outPath, JSON.stringify(result.config, null, 2) + "\n");
-      console.log(`\n  ✓ Written shipkey.json`);
+      console.log(`\n  ${TICK} Written shipkey.json`);
     } else {
       console.log(`\n  (dry-run: shipkey.json not written)`);
     }

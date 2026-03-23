@@ -3,6 +3,7 @@ import { scan } from "../scanner";
 import { getBackend } from "../backends";
 import { guessProvider } from "../providers";
 import { loadConfig } from "../config";
+import { TICK, CROSS, ARROW } from "../symbols";
 import { resolve, basename } from "path";
 
 export const pushCommand = new Command("push")
@@ -70,10 +71,10 @@ export const pushCommand = new Command("push")
           },
           value: entry.value,
         });
-        console.log(`  ✓ ${entry.key} → ${backend.name}`);
+        console.log(`  ${TICK} ${entry.key} ${ARROW} ${backend.name}`);
       } catch (err) {
         console.error(
-          `  ✗ ${entry.key} — ${err instanceof Error ? err.message : err}`
+          `  ${CROSS} ${entry.key} — ${err instanceof Error ? err.message : err}`
         );
       }
     }

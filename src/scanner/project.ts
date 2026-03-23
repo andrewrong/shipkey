@@ -1,4 +1,5 @@
 import { basename, join } from "path";
+import { BULLET, ARROW } from "../symbols";
 import { readFile } from "fs/promises";
 import { scan } from "./index";
 import { scanWorkflows, detectGitRepo } from "./parsers/workflow";
@@ -154,7 +155,7 @@ export function printScanSummary({ config, stats, workflowSecrets }: ProjectScan
       `  Workflows: ${stats.workflowFiles} files, ${stats.workflowSecrets} secrets`
     );
     for (const secret of workflowSecrets) {
-      console.log(`    · ${secret}`);
+      console.log(`    ${BULLET} ${secret}`);
     }
   }
 
@@ -164,7 +165,7 @@ export function printScanSummary({ config, stats, workflowSecrets }: ProjectScan
 
   if (stats.wranglerFile) {
     console.log(
-      `  Wrangler:  ${stats.wranglerFile} → ${stats.wranglerProjects.join(", ")}`
+      `  Wrangler:  ${stats.wranglerFile} ${ARROW} ${stats.wranglerProjects.join(", ")}`
     );
   }
 
@@ -175,7 +176,7 @@ export function printScanSummary({ config, stats, workflowSecrets }: ProjectScan
       console.log(`    ${name}: ${provider.fields.join(", ")}`);
       if (provider.permissions && provider.permissions.length > 0) {
         const perms = provider.permissions.map((p) => p.permission).join(", ");
-        console.log(`      → ${perms}`);
+        console.log(`      ${ARROW} ${perms}`);
       }
     }
   }

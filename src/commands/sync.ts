@@ -3,6 +3,7 @@ import { resolve } from "path";
 import { getBackend } from "../backends";
 import type { SecretBackend } from "../backends/types";
 import { GitHubTarget } from "../targets/github";
+import { TICK, CROSS, ARROW } from "../symbols";
 import { CloudflareTarget } from "../targets/cloudflare";
 import type { SyncTarget } from "../targets/types";
 import { loadConfig, buildSecretRefMap } from "../config";
@@ -67,7 +68,7 @@ async function syncTarget(
           secrets.push(secret);
         } catch (err) {
           console.error(
-            `  ✗ ${envKey} — ${err instanceof Error ? err.message : err}`
+            `  ${CROSS} ${envKey} — ${err instanceof Error ? err.message : err}`
           );
           totalFailed++;
         }
@@ -85,7 +86,7 @@ async function syncTarget(
           }
         } catch (err) {
           console.error(
-            `  ✗ ${name} — ${err instanceof Error ? err.message : err}`
+            `  ${CROSS} ${name} — ${err instanceof Error ? err.message : err}`
           );
           totalFailed++;
         }
@@ -97,11 +98,11 @@ async function syncTarget(
     const result = await target.sync(secrets, destination);
 
     for (const name of result.success) {
-      console.log(`  ✓ ${name} → ${destination}`);
+      console.log(`  ${TICK} ${name} ${ARROW} ${destination}`);
       totalSynced++;
     }
     for (const { name, error } of result.failed) {
-      console.error(`  ✗ ${name} → ${destination} — ${error}`);
+      console.error(`  ${CROSS} ${name} ${ARROW} ${destination} — ${error}`);
       totalFailed++;
     }
   }

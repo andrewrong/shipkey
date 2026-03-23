@@ -3,6 +3,7 @@ import { getBackend } from "../backends";
 import { loadConfig } from "../config";
 import { writeEnvFile, mergeEnvContent } from "../env-writer";
 import { readFile, writeFile } from "fs/promises";
+import { TICK, CROSS } from "../symbols";
 import { resolve, join, basename } from "path";
 
 export const pullCommand = new Command("pull")
@@ -51,10 +52,10 @@ export const pullCommand = new Command("pull")
         const value = await backend.read(ref);
         const envKey = ref.field;
         entries.push({ key: envKey, value, ref });
-        console.log(`  ✓ Restored ${envKey}`);
+        console.log(`  ${TICK} Restored ${envKey}`);
       } catch (err) {
         console.error(
-          `  ✗ ${ref.provider}/${ref.field} — ${err instanceof Error ? err.message : err}`
+          `  ${CROSS} ${ref.provider}/${ref.field} — ${err instanceof Error ? err.message : err}`
         );
       }
     }
@@ -67,7 +68,7 @@ export const pullCommand = new Command("pull")
       envVars[e.key] = e.value;
     }
     const envFile = await writeEnvFile(projectRoot, envVars);
-    console.log(`\n  ✓ Updated ${envFile}`);
+    console.log(`\n  ${TICK} Updated ${envFile}`);
 
     // Generate .envrc
     if (opts.envrc) {
@@ -92,7 +93,7 @@ export const pullCommand = new Command("pull")
       ].join("\n");
 
       await writeFile(join(projectRoot, ".envrc"), envrcContent);
-      console.log(`\n  ✓ Generated .envrc`);
+      console.log(`\n  ${TICK} Generated .envrc`);
     }
 
     // Generate .dev.vars (merge with existing content)
@@ -117,7 +118,7 @@ export const pullCommand = new Command("pull")
 
       const devVarsContent = mergeEnvContent(existingContent, envVars);
       await writeFile(devVarsPath, devVarsContent);
-      console.log(`  ✓ Generated .dev.vars`);
+      console.log(`  ${TICK} Generated .dev.vars`);
     }
 
     console.log(`\nRestored ${entries.length} keys for ${project}.${env}`);
