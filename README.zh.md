@@ -91,6 +91,64 @@ shipkey sync     →  推送密钥到 GitHub Actions、Cloudflare Workers
 
 不指定时默认使用 `"1password"`（向后兼容）。
 
+## 支持的 Provider
+
+shipkey 会根据环境变量名自动识别 Provider，内置 40+ 个 Provider 及配置指引。
+
+| 分类 | Provider | 环境变量模式 |
+|------|----------|-------------|
+| **AI** | OpenRouter | `OPENROUTER_*` |
+| | OpenAI | `OPENAI_*` |
+| | Anthropic | `ANTHROPIC_*`, `CLAUDE_API_*` |
+| | Google AI | `GEMINI_*`, `GOOGLE_AI_*` |
+| | Replicate | `REPLICATE_*` |
+| | Hugging Face | `HUGGINGFACE_*`, `HF_*` |
+| | fal.ai | `FAL_*` |
+| | xAI | `XAI_*`, `GROK_*` |
+| **支付** | Stripe | `STRIPE_*` |
+| **认证** | Clerk | `CLERK_*` |
+| | Auth0 | `AUTH0_*` |
+| **社交 / OAuth** | GitHub | `GITHUB_*` |
+| | Google | `GOOGLE_*`, `GCP_*` |
+| | Discord | `DISCORD_*` |
+| | Slack | `SLACK_*` |
+| | Reddit | `REDDIT_*` |
+| | Product Hunt | `PRODUCTHUNT_*`, `PH_*` |
+| **通信** | Agora | `AGORA_*` |
+| | Twilio | `TWILIO_*` |
+| | SendGrid | `SENDGRID_*` |
+| | Resend | `RESEND_*` |
+| **数据库** | Supabase | `SUPABASE_*` |
+| | Turso | `TURSO_*` |
+| | Upstash | `UPSTASH_*` |
+| | Neon | `NEON_*` |
+| | ClickHouse | `CLICKHOUSE_*` |
+| | Redis | `REDIS_*` |
+| | Database | `DATABASE_*`, `DB_*` |
+| **开发平台** | Expo | `EXPO_*` |
+| | Daytona | `DAYTONA_*` |
+| **基础设施** | Cloudflare | `CLOUDFLARE_*`, `R2_*` |
+| | AWS | `AWS_*`, `EC2_*` |
+| | Vercel | `VERCEL_*` |
+| | Fly | `FLY_*` |
+| | npm | `NPM_*` |
+| | Sentry | `SENTRY_*` |
+| **Web3** | Coinbase | `COINBASE_*` |
+| | Alchemy | `ALCHEMY_*` |
+| | WalletConnect | `WALLETCONNECT_*` |
+| | Pimlico | `PIMLICO_*` |
+| | Etherscan | `ETHERSCAN_*` |
+| **CMS** | TinaCMS | `TINA_*` |
+| | Notion | `NOTION_*` |
+| **地图** | Mapbox | `MAPBOX_*` |
+| | OpenWeather | `OPENWEATHER_*` |
+| **分析** | Plausible | `PLAUSIBLE_*` |
+| **表单** | Formspree | `FORMSPREE_*` |
+| **安全** | Turnstile | `TURNSTILE_*` |
+| **沙箱** | Sandbank | `SANDBANK_*`, `SANDBOX_*` |
+
+未识别的变量会归入 **General** 分组。如需添加新 Provider，请 [提交 issue](https://github.com/chekusu/shipkey/issues)。
+
 ## 命令
 
 ### `shipkey setup [dir]`

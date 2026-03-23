@@ -107,7 +107,13 @@ export const PROVIDERS: ProviderDefinition[] = [
     guide_url: "https://manage.auth0.com/dashboard",
     guide: "Auth0 Dashboard > Applications > Settings",
   },
-  // --- Communication ---
+  // --- Communication / RTC ---
+  {
+    name: "Agora",
+    patterns: [/AGORA/i],
+    guide_url: "https://console.agora.io/",
+    guide: "Agora Console > Project Management > Config > App ID / App Certificate",
+  },
   {
     name: "Twilio",
     patterns: [/TWILIO/i],
@@ -160,6 +166,12 @@ export const PROVIDERS: ProviderDefinition[] = [
     patterns: [/REDIS/i],
   },
   // --- Dev Platforms ---
+  {
+    name: "Expo",
+    patterns: [/EXPO/i],
+    guide_url: "https://expo.dev/accounts/[account]/settings/access-tokens",
+    guide: "Expo > Account Settings > Access Tokens > Create Token",
+  },
   {
     name: "Daytona",
     patterns: [/DAYTONA/i],
@@ -287,6 +299,13 @@ export const PROVIDERS: ProviderDefinition[] = [
     patterns: [/CLICKHOUSE/i],
     guide_url: "https://clickhouse.cloud/",
     guide: "ClickHouse Cloud > Service > Connect",
+  },
+  // --- Sandbox ---
+  {
+    name: "Sandbank",
+    patterns: [/SANDBANK/i, /SANDBOX/i],
+    guide_url: "https://cloud.sandbank.dev",
+    guide: "Sandbank Cloud > Dashboard > API Keys",
   },
   // --- Misc ---
   {

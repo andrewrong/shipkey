@@ -91,6 +91,64 @@ Set the backend in `shipkey.json`:
 
 Default is `"1password"` if omitted (backwards compatible).
 
+## Supported Providers
+
+shipkey auto-detects providers from your environment variable names. 40+ providers are supported with setup guides built in.
+
+| Category | Provider | Env Pattern |
+|----------|----------|-------------|
+| **AI** | OpenRouter | `OPENROUTER_*` |
+| | OpenAI | `OPENAI_*` |
+| | Anthropic | `ANTHROPIC_*`, `CLAUDE_API_*` |
+| | Google AI | `GEMINI_*`, `GOOGLE_AI_*` |
+| | Replicate | `REPLICATE_*` |
+| | Hugging Face | `HUGGINGFACE_*`, `HF_*` |
+| | fal.ai | `FAL_*` |
+| | xAI | `XAI_*`, `GROK_*` |
+| **Payments** | Stripe | `STRIPE_*` |
+| **Auth** | Clerk | `CLERK_*` |
+| | Auth0 | `AUTH0_*` |
+| **Social / OAuth** | GitHub | `GITHUB_*` |
+| | Google | `GOOGLE_*`, `GCP_*` |
+| | Discord | `DISCORD_*` |
+| | Slack | `SLACK_*` |
+| | Reddit | `REDDIT_*` |
+| | Product Hunt | `PRODUCTHUNT_*`, `PH_*` |
+| **Communication** | Agora | `AGORA_*` |
+| | Twilio | `TWILIO_*` |
+| | SendGrid | `SENDGRID_*` |
+| | Resend | `RESEND_*` |
+| **Databases** | Supabase | `SUPABASE_*` |
+| | Turso | `TURSO_*` |
+| | Upstash | `UPSTASH_*` |
+| | Neon | `NEON_*` |
+| | ClickHouse | `CLICKHOUSE_*` |
+| | Redis | `REDIS_*` |
+| | Database | `DATABASE_*`, `DB_*` |
+| **Dev Platforms** | Expo | `EXPO_*` |
+| | Daytona | `DAYTONA_*` |
+| **Infrastructure** | Cloudflare | `CLOUDFLARE_*`, `R2_*` |
+| | AWS | `AWS_*`, `EC2_*` |
+| | Vercel | `VERCEL_*` |
+| | Fly | `FLY_*` |
+| | npm | `NPM_*` |
+| | Sentry | `SENTRY_*` |
+| **Web3** | Coinbase | `COINBASE_*` |
+| | Alchemy | `ALCHEMY_*` |
+| | WalletConnect | `WALLETCONNECT_*` |
+| | Pimlico | `PIMLICO_*` |
+| | Etherscan | `ETHERSCAN_*` |
+| **CMS** | TinaCMS | `TINA_*` |
+| | Notion | `NOTION_*` |
+| **Maps** | Mapbox | `MAPBOX_*` |
+| | OpenWeather | `OPENWEATHER_*` |
+| **Analytics** | Plausible | `PLAUSIBLE_*` |
+| **Forms** | Formspree | `FORMSPREE_*` |
+| **Security** | Turnstile | `TURNSTILE_*` |
+| **Sandbox** | Sandbank | `SANDBANK_*`, `SANDBOX_*` |
+
+Unrecognized variables are grouped under **General**. To request a new provider, [open an issue](https://github.com/chekusu/shipkey/issues).
+
 ## Commands
 
 ### `shipkey setup [dir]`
