@@ -65,7 +65,7 @@ shipkey scan     →  Detect .env files, workflows, wrangler configs
                     Generate shipkey.json with providers & permissions
 
 shipkey setup    →  Open browser wizard to enter API keys
-                    Save to password manager + local .env.local/.dev.vars
+                    Save to password manager + env-specific local files
 
 shipkey pull     →  Restore all keys from password manager to local files
                     New machine ready in seconds
@@ -190,8 +190,8 @@ Auto-infers required permissions per provider.
 Push local env values to your password manager.
 
 ```bash
-shipkey push                   # Push dev env
-shipkey push -e prod           # Push prod env
+shipkey push                   # Push prod env (default)
+shipkey push -e dev            # Push dev env
 shipkey push --vault myteam    # Custom vault
 ```
 
@@ -200,15 +200,21 @@ shipkey push --vault myteam    # Custom vault
 Pull secrets from your password manager and generate local env files.
 
 ```bash
-shipkey pull                   # Pull dev env
-shipkey pull -e prod           # Pull prod env
+shipkey pull                   # Pull prod env (default)
+shipkey pull -e dev            # Pull dev env
 shipkey pull --no-envrc        # Skip .envrc generation
 shipkey pull --no-dev-vars     # Skip .dev.vars generation
 ```
 
-Generates:
+Generates environment-specific local files:
+
+| Environment | Regular projects | Cloudflare Workers |
+|-------------|------------------|--------------------|
+| `dev` | `.env.development.local` | `.dev.vars` |
+| `prod` | `.env.production.local` | `.dev.vars.production` |
+
+Also generates:
 - `.envrc` with `op://` references for direnv (1Password) or direct values (Bitwarden)
-- `.dev.vars` with resolved values for Cloudflare Workers
 
 ### `shipkey sync [target] [dir]`
 

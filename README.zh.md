@@ -65,7 +65,7 @@ shipkey scan     →  检测 .env 文件、工作流、wrangler 配置
                     生成 shipkey.json（含 providers 和权限推荐）
 
 shipkey setup    →  打开浏览器向导输入 API 密钥
-                    保存到密码管理器 + 本地 .env.local/.dev.vars
+                    保存到密码管理器 + 按环境写入本地文件
 
 shipkey pull     →  从密码管理器恢复所有密钥到本地文件
                     新电脑数秒就绪
@@ -190,8 +190,8 @@ shipkey scan --dry-run         # 预览，不写入文件
 将本地环境变量推送到密码管理器。
 
 ```bash
-shipkey push                   # 推送 dev 环境
-shipkey push -e prod           # 推送 prod 环境
+shipkey push                   # 推送 prod 环境（默认）
+shipkey push -e dev            # 推送 dev 环境
 shipkey push --vault myteam    # 自定义保险库
 ```
 
@@ -200,15 +200,21 @@ shipkey push --vault myteam    # 自定义保险库
 从密码管理器拉取密钥并生成本地 env 文件。
 
 ```bash
-shipkey pull                   # 拉取 dev 环境
-shipkey pull -e prod           # 拉取 prod 环境
+shipkey pull                   # 拉取 prod 环境（默认）
+shipkey pull -e dev            # 拉取 dev 环境
 shipkey pull --no-envrc        # 跳过 .envrc 生成
 shipkey pull --no-dev-vars     # 跳过 .dev.vars 生成
 ```
 
-生成文件：
+按环境生成对应的本地文件：
+
+| 环境 | 普通项目 | Cloudflare Workers |
+|------|---------|-------------------|
+| `dev` | `.env.development.local` | `.dev.vars` |
+| `prod` | `.env.production.local` | `.dev.vars.production` |
+
+此外还会生成：
 - `.envrc` — 含 `op://` 引用（1Password）或直接值（Bitwarden），配合 direnv 使用
-- `.dev.vars` — 含解析后的值，用于 Cloudflare Workers
 
 ### `shipkey sync [target] [dir]`
 
